@@ -5,19 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="92853a93-d0c6-4b67-8c3e-ea6b0b2b965f" name="변경" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/nlp_model_project.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/RUN.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/cnn_spam_classifier.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/lstm_imdb_lightning.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assignment/LSTM_movie_review.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assignment/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assignment/assignment.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,61 +36,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.6783021637238358" />
-      <entry key="MS500" value="1.9253044280378524" />
-      <entry key="S2" value="1.9807790039885513" />
-      <entry key="S5" value="1.9922668077625936" />
-      <entry key="S10" value="1.9961258995541646" />
-      <entry key="S30" value="1.998706961957974" />
-      <entry key="S60" value="1.999353271850338" />
-      <entry key="M2" value="1.9996766533639558" />
-      <entry key="M5" value="2.005065799011639" />
-      <entry key="M10" value="2.2473121153524405" />
-      <entry key="M15" value="2.997984810380344" />
-      <entry key="M30" value="9.466941868443103" />
-      <entry key="H1" value="41.484388634768834" />
-      <entry key="H2" value="112.85898241423824" />
-      <entry key="H4" value="196.28663408169487" />
-      <entry key="D1" value="318.7135480183038" />
-      <entry key="W1" value="347.0235541852609" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0000000000006406" />
+      <entry key="S10" value="1.0000011292702822" />
+      <entry key="S30" value="1.0174588951096097" />
+      <entry key="S60" value="1.261942606399845" />
+      <entry key="M2" value="2.3501166380367615" />
+      <entry key="M5" value="5.096606377660169" />
+      <entry key="M10" value="7.046564696484845" />
+      <entry key="M15" value="7.90399137892231" />
+      <entry key="M30" value="9.32026467748144" />
+      <entry key="H1" value="18.41099789940281" />
+      <entry key="H2" value="62.25062450246665" />
+      <entry key="H4" value="143.78607545614796" />
+      <entry key="D1" value="309.0186171703017" />
+      <entry key="W1" value="353.8762288147683" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
-      <entry key="S10" value="1.2353398631286726E-253" />
-      <entry key="S30" value="4.981441650166511E-85" />
-      <entry key="S60" value="7.284411109297466E-43" />
-      <entry key="M2" value="1.1760405923979788E-21" />
-      <entry key="M5" value="1.0840967593384197E-8" />
-      <entry key="M10" value="3.1211931216112006E-4" />
-      <entry key="M15" value="0.011307915519647627" />
-      <entry key="M30" value="0.5331093634082013" />
-      <entry key="H1" value="4.6199753598459985" />
-      <entry key="H2" value="15.036644046435816" />
-      <entry key="H4" value="27.943940579430507" />
-      <entry key="D1" value="47.56984360202584" />
-      <entry key="W1" value="52.186077265987066" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="1.046193337425287E-164" />
+      <entry key="S60" value="1.055657163765116E-82" />
+      <entry key="M2" value="1.415749893924912E-41" />
+      <entry key="M5" value="1.1675990593382668E-16" />
+      <entry key="M10" value="3.2391680964023596E-8" />
+      <entry key="M15" value="2.4972256398873525E-5" />
+      <entry key="M30" value="0.02505266467389995" />
+      <entry key="H1" value="1.0015173258545167" />
+      <entry key="H2" value="7.001003952071789" />
+      <entry key="H4" value="19.06743835623517" />
+      <entry key="D1" value="44.634003232897676" />
+      <entry key="W1" value="51.713315657007755" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9690273587971728" />
-      <entry key="MS500" value="1.6763747600075574" />
-      <entry key="S2" value="1.910597138386083" />
-      <entry key="S5" value="1.963494825515165" />
-      <entry key="S10" value="1.9816208449180888" />
-      <entry key="S30" value="1.9938452471040227" />
-      <entry key="S60" value="1.9969190623541107" />
-      <entry key="M2" value="1.9984587094024653" />
-      <entry key="M5" value="2.0045761112229497" />
-      <entry key="M10" value="2.2473188444283947" />
-      <entry key="M15" value="3.008916457791076" />
-      <entry key="M30" value="9.998099994646088" />
-      <entry key="H1" value="46.097178015716615" />
-      <entry key="H2" value="127.88447259916211" />
-      <entry key="H4" value="224.22046482086887" />
-      <entry key="D1" value="366.2805872036428" />
-      <entry key="W1" value="399.2091937245317" />
+      <entry key="MS100" value="0.757858283255199" />
+      <entry key="MS500" value="0.9460576467255959" />
+      <entry key="S2" value="0.9862327044933592" />
+      <entry key="S5" value="0.9944701686738525" />
+      <entry key="S10" value="0.9972323783654101" />
+      <entry key="S30" value="1.0165219364677716" />
+      <entry key="S60" value="1.2613127629581358" />
+      <entry key="M2" value="2.3492456777896096" />
+      <entry key="M5" value="5.095567155041748" />
+      <entry key="M10" value="7.0457795017438105" />
+      <entry key="M15" value="7.903412761106645" />
+      <entry key="M30" value="9.344878118290504" />
+      <entry key="H1" value="19.410770764898377" />
+      <entry key="H2" value="69.24633849735255" />
+      <entry key="H4" value="162.8465661420135" />
+      <entry key="D1" value="353.64998073068074" />
+      <entry key="W1" value="405.58910951679366" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -114,6 +106,7 @@
   "keyToString": {
     "ASKED_MARK_IGNORED_FILES_AS_EXCLUDED": "true",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.LSTM_movie_review.executor": "Run",
     "Python.cnn_spam_classifier.executor": "Run",
     "Python.lstm_imdb_lightning.executor": "Run",
     "RunOnceActivity.MCP Project settings loaded": "true",
@@ -122,8 +115,8 @@
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
     "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "C:/LLM_workspace/PythonProject/nlp_model_project",
+    "git-widget-placeholder": "team1",
+    "last_opened_file_path": "C:/LLM_workspace/PythonProject/nlp_model_project/assignment",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -134,6 +127,8 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\LLM_workspace\PythonProject\nlp_model_project\assignment" />
+      <recent name="C:\LLM_workspace\PythonProject\nlp_model_project\data" />
       <recent name="C:\LLM_workspace\PythonProject\nlp_model_project" />
       <recent name="C:\LLM_workspace\PythonProject\nlp_model_project\src" />
     </key>
@@ -163,7 +158,7 @@
       <option name="presentableId" value="Default" />
       <updated>1782435811985</updated>
       <workItem from="1782435812996" duration="11795000" />
-      <workItem from="1782450551804" duration="7194000" />
+      <workItem from="1782450551804" duration="11525000" />
     </task>
     <servers />
   </component>
@@ -173,5 +168,6 @@
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/nlp_model_project$cnn_spam_classifier.coverage" NAME="cnn_spam_classifier 커버리지 결과" MODIFIED="1782453077292" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
     <SUITE FILE_PATH="coverage/nlp_model_project$lstm_imdb_lightning.coverage" NAME="lstm_imdb_lightning 커버리지 결과" MODIFIED="1782455662322" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/src" />
+    <SUITE FILE_PATH="coverage/nlp_model_project$LSTM_movie_review.coverage" NAME="LSTM_movie_review 커버리지 결과" MODIFIED="1782463445767" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/assignment" />
   </component>
 </project>
