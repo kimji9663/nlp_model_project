@@ -53,3 +53,4 @@ models/
 .env
 
 .zip
+data/ratings.txt

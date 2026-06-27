@@ -113,6 +113,11 @@ CPU만 사용하는 경우에도 위의 `requirements.txt` 설치로 대부분 �
 ```bash
 python -c "import torch; print(torch.__version__); print(torch.cuda.is_available())"
 ```
+GPU 사용할 경우 명령어
+```bash
+cd 실행할파일이있는위치
+.venv\Scripts\python.exe 실행할파일명.py
+```
 
 ## 7. 중요 실행 참고사항
 

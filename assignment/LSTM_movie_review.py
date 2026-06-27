@@ -57,6 +57,7 @@ from torch.utils.data import random_split
 
 # PyTorch Lightning은 학습 루프를 구조적으로 관리하는 라이브러리입니다.
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import EarlyStopping
 
 # torchmetrics는 정확도 같은 평가 지표를 안정적으로 계산하기 위해 사용합니다.
 from torchmetrics.classification import BinaryAccuracy
@@ -101,27 +102,31 @@ class Config:
     embedding_dim: int = 128
 
     # LSTM 은닉 상태의 차원 수입니다.
-    hidden_dim: int = 128
+    # hidden_dim: int = 128
+    hidden_dim: int = 64
 
     # LSTM 계층 수입니다.
     num_layers: int = 1
 
     # 과적합을 줄이기 위한 Dropout 비율입니다.
-    dropout: float = 0.3
+    # dropout: float = 0.3
+    dropout: float = 0.5
 
     # 학습률입니다.
-    learning_rate: float = 0.001
+    # learning_rate: float = 0.001
+    learning_rate: float = 0.0005
 
     # 전체 데이터를 몇 번 반복 학습할지 지정합니다.
-    max_epochs: int = 3
+    # max_epochs: int = 3
+    max_epochs: int = 10
 
     # 검증 데이터 비율입니다.
     # 네이버 원본 train 25,000개 중 일부를 validation으로 분리합니다.
     val_ratio: float = 0.2
 
     # CPU에서 실행할 때 DataLoader가 사용할 병렬 작업자 수입니다.
-    # Windows/PyCharm에서는 0이 가장 안전합니다.
     num_workers: int = 0
+    # num_workers: int = 4  # GPU 사용 시
 
     # 재현 가능한 결과를 위해 난수 시드를 고정합니다.
     seed: int = 42
@@ -191,7 +196,7 @@ def extract_ratings(config: Config) -> Path:
     return dataset_path
 
 
-def read_ratings_txt(file_path: Path) -> List[Tuple[str, int]]:
+def read_ratings_txt(file_path: Path, seed) -> List[Tuple[str, int]]:
     """ratings.txt 파일에서 리뷰 텍스트와 라벨을 읽고 섞어서 반환합니다."""
 
     samples: List[Tuple[str, int]] = []
@@ -206,6 +211,7 @@ def read_ratings_txt(file_path: Path) -> List[Tuple[str, int]]:
             samples.append((document, int(label)))
 
     # 라벨 순서가 한쪽으로 몰리지 않도록 샘플 순서를 섞습니다.
+    random.seed(seed)
     random.shuffle(samples)
 
     return samples
@@ -263,7 +269,7 @@ def load_data(config: Config) -> Tuple[List[Tuple[str, int]], List[Tuple[str, in
         ratings_file = Path(config.data_dir) / config.ratings_file
 
         # ratings.txt에서 전체 샘플을 읽고 섞습니다.
-        samples = read_ratings_txt(ratings_file)
+        samples = read_ratings_txt(ratings_file, seed=config.seed)
 
         # 앞쪽 80%를 훈련용, 뒤쪽 20%를 테스트용으로 분할합니다.
         split_idx = int(len(samples) * 0.8)
@@ -515,15 +521,17 @@ class LSTMClassifier(pl.LightningModule):
             num_layers=num_layers,
             batch_first=True,
             dropout=dropout if num_layers > 1 else 0.0,
-            bidirectional=False,
+            # bidirectional=False,
+            bidirectional=True,  # 양방향
         )
 
+        # 별도 Dropout 선언
         # Dropout은 일부 뉴런 출력을 무작위로 꺼서 과적합을 줄입니다.
         self.dropout = nn.Dropout(dropout)
 
         # 최종 분류 계층입니다.
         # 부정/긍정 2개 클래스를 예측하므로 출력 크기는 2입니다.
-        self.classifier = nn.Linear(hidden_dim, 2)
+        self.classifier = nn.Linear(hidden_dim * 2, 2)
 
         # CrossEntropyLoss는 다중 클래스 분류 손실 함수입니다.
         # 출력 logits와 정답 라벨 0/1을 비교하여 손실을 계산합니다.
@@ -544,7 +552,8 @@ class LSTMClassifier(pl.LightningModule):
 
         # 단어 인덱스를 임베딩 벡터로 변환합니다.
         # embedded 형태: (배치크기, 문장길이, 임베딩차원)
-        embedded = self.embedding(input_ids)
+        # embedded = self.embedding(input_ids)
+        embedded = self.dropout(self.embedding(input_ids))
 
         # LSTM에 임베딩 시퀀스를 입력합니다.
         # output은 모든 시점의 은닉 상태입니다.
@@ -554,10 +563,31 @@ class LSTMClassifier(pl.LightningModule):
         # hidden[-1]은 패딩 토큰(zero-embedding)을 다 처리한 뒤의 상태라
         # 패딩이 길수록 실제 내용 신호가 희석됩니다.
         # 대신 각 샘플의 마지막 실제 토큰 위치의 output을 사용합니다.
+        # bidirectional 정방향/역방향 분리 추출(추가 이유)
         lengths = (input_ids != 0).sum(dim=1).clamp(min=1)  # (배치크기,)
         batch_size = output.size(0)
-        sentence_vector = output[torch.arange(batch_size, device=output.device), lengths - 1]
+        # sentence_vector = output[torch.arange(batch_size, device=output.device), lengths - 1]
+        # 추가 --------------------------
+        hidden_dim = output.size(2) // 2  # 64
 
+        # 정방향: 마지막 실제 토큰 위치
+        forward_out = output[
+            torch.arange(batch_size, device=output.device),
+            lengths - 1,
+            :hidden_dim  # 앞쪽 64차원
+        ]
+
+        # 역방향: 항상 0번 위치 (역방향은 처음이 마지막)
+        backward_out = output[
+            torch.arange(batch_size, device=output.device),
+            0,
+            hidden_dim:  # 뒤쪽 64차원
+        ]
+
+        # 정방향 + 역방향 합치기
+        sentence_vector = torch.cat([forward_out, backward_out], dim=1)
+        sentence_vector = self.dropout(sentence_vector)
+        # ---------------------추가 end-----
         # Dropout을 적용합니다.
         sentence_vector = self.dropout(sentence_vector)
 
@@ -695,6 +725,13 @@ def main() -> None:
     # GPU 사용 가능 여부에 따라 accelerator를 선택합니다.
     accelerator = "gpu" if torch.cuda.is_available() else "cpu"
 
+    # 추가 -------------------------
+    early_stopping = EarlyStopping(
+        monitor="val_loss",
+        patience=2,
+        mode="min",
+    )
+
     # PyTorch Lightning Trainer를 생성합니다.
     trainer = pl.Trainer(
         max_epochs=config.max_epochs,
@@ -702,6 +739,7 @@ def main() -> None:
         devices=1,
         log_every_n_steps=10,
         enable_checkpointing=False,
+        callbacks=[early_stopping],  # 추가
     )
 
     # 모델 학습을 시작합니다.
