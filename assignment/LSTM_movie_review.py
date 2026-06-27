@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-IMDB 영화 리뷰 감성 분석 LSTM 모델 - PyTorch Lightning 정상 실행 버전
+네이버 영화 리뷰 감성 분석 LSTM 모델 - PyTorch Lightning 정상 실행 버전
 """
 
 # ---------------------------------------------------------------------
@@ -13,14 +13,17 @@ import os
 # re는 정규표현식을 사용하여 HTML 태그 제거, 특수문자 제거 등을 처리할 때 사용합니다.
 import re
 
+# 한글 형태소 분석기
+from konlpy.tag import Okt
+
 # tarfile은 .tar.gz 압축 파일을 해제할 때 사용합니다.
-import tarfile
+# import tarfile
+
+# zip 압축 파일을 해제합니다.
+import zipfile
 
 # random은 데이터 일부를 검증용으로 나누거나 샘플 데이터를 섞을 때 사용합니다.
 import random
-
-# urllib.request는 인터넷 URL에서 파일을 다운로드할 때 사용합니다.
-import urllib.request
 
 # Counter는 단어가 몇 번 등장했는지 세어 vocabulary를 만들 때 사용합니다.
 from collections import Counter
@@ -33,6 +36,7 @@ from pathlib import Path
 
 # typing은 함수 인자와 반환값의 타입을 명확하게 표시하기 위해 사용합니다.
 from typing import Dict, List, Tuple
+
 
 # ---------------------------------------------------------------------
 # 2. 딥러닝 라이브러리 불러오기
@@ -57,6 +61,8 @@ import pytorch_lightning as pl
 # torchmetrics는 정확도 같은 평가 지표를 안정적으로 계산하기 위해 사용합니다.
 from torchmetrics.classification import BinaryAccuracy
 
+print(f"CUDA 사용 가능 여부: {torch.cuda.is_available()}")
+print(f"현재 GPU 장치명: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else '없음'}")
 
 # ---------------------------------------------------------------------
 # 3. 설정값 정의
@@ -66,9 +72,6 @@ from torchmetrics.classification import BinaryAccuracy
 class Config:
     """프로젝트 전체에서 사용할 설정값을 저장하는 클래스입니다."""
 
-    # 데이터셋은 ratings.zip 파일로 제공됩니다.
-    data_url: str = "../data/ratings.zip"
-
     # 데이터 파일을 저장할 기본 폴더입니다.
     # 프로젝트 루트 아래 data 폴더를 사용합니다.
     data_dir: str = "../data"
@@ -76,8 +79,8 @@ class Config:
     # 압축 파일명입니다.
     archive_name: str = "ratings.zip"
 
-    # 압축 해제 후 생성되는 폴더명입니다.
-    dataset_folder: str = "ratings"
+    # 압축 해제 후 생성되는 파일명입니다.
+    ratings_file: str = "ratings.txt"
 
     # 한 문장에서 사용할 최대 단어 개수입니다.
     # 긴 리뷰는 앞에서부터 max_len개 단어만 사용하고, 짧은 리뷰는 패딩합니다.
@@ -113,7 +116,7 @@ class Config:
     max_epochs: int = 3
 
     # 검증 데이터 비율입니다.
-    # IMDB 원본 train 25,000개 중 일부를 validation으로 분리합니다.
+    # 네이버 원본 train 25,000개 중 일부를 validation으로 분리합니다.
     val_ratio: float = 0.2
 
     # CPU에서 실행할 때 DataLoader가 사용할 병렬 작업자 수입니다.
@@ -123,7 +126,7 @@ class Config:
     # 재현 가능한 결과를 위해 난수 시드를 고정합니다.
     seed: int = 42
 
-    # 실제 IMDB 데이터 다운로드에 실패했을 때 예제 데이터로라도 실행할지 지정합니다.
+    # 실제 네이버 데이터 다운로드에 실패했을 때 예제 데이터로라도 실행할지 지정합니다.
     # 수업 환경에서 인터넷이 막혀 있어도 코드 구조를 확인할 수 있게 하기 위한 옵션입니다.
     use_toy_data_if_download_fails: bool = True
 
@@ -132,17 +135,19 @@ class Config:
 # 4. 텍스트 전처리 함수
 # ---------------------------------------------------------------------
 
+okt = Okt()
+
 def clean_text(text: str) -> str:
     """영화 리뷰 원문을 모델에 넣기 쉬운 형태로 정리합니다."""
 
-    # HTML 줄바꿈 태그나 기타 HTML 태그를 공백으로 바꿉니다.
-    text = re.sub(r"<.*?>", " ", text)
-
-    # 알파벳과 숫자, 기본 문장부호를 제외한 나머지 문자는 공백으로 바꿉니다.
-    text = re.sub(r"[^a-zA-Z0-9!?.,' ]", " ", text)
+    # 한글, 알파벳과 숫자, 기본 문장부호를 제외한 나머지 문자는 공백으로 바꿉니다.
+    text = re.sub(r"[^가-힣a-zA-Z0-9!?.,' ]", " ", text)
 
     # 여러 개의 공백을 하나의 공백으로 줄입니다.
     text = re.sub(r"\s+", " ", text)
+
+    # 동일한 한글이 2번 이상 반복되면 2번으로 축소 (예: "너무너무너무"는 그대로, "ㅋㅋㅋㅋ"는 "ㅋㅋ")
+    text = re.sub(r"([ㄱ-ㅎㅏ-ㅣ])\1+", r"\1\1", text)
 
     # 대소문자를 구분하지 않도록 모두 소문자로 변환합니다.
     text = text.lower().strip()
@@ -154,80 +159,55 @@ def clean_text(text: str) -> str:
 def tokenize(text: str) -> List[str]:
     """문장을 단어 리스트로 분리합니다."""
 
+    cleaned = clean_text(text)
+
     # clean_text()로 텍스트를 정리한 뒤 공백 기준으로 단어를 나눕니다.
-    return clean_text(text).split()
+    return okt.morphs(cleaned)
 
 
 # ---------------------------------------------------------------------
-# 5. IMDB 데이터 다운로드 및 로드 함수
+# 5. 네이버 데이터 다운로드 및 로드 함수
 # ---------------------------------------------------------------------
 
-def download_and_extract_imdb(config: Config) -> Path:
-    """IMDB 데이터셋이 없으면 다운로드하고 압축을 해제합니다."""
+def extract_ratings(config: Config) -> Path:
+    """ratings.zip 압축을 해제하고 데이터셋 폴더 경로를 반환합니다."""
 
-    # data_dir 문자열을 Path 객체로 변환합니다.
     data_dir = Path(config.data_dir)
-
-    # data 폴더가 없으면 새로 만듭니다.
     data_dir.mkdir(parents=True, exist_ok=True)
 
-    # 압축 해제 후 존재해야 하는 aclImdb 폴더 경로를 만듭니다.
-    dataset_path = data_dir / config.dataset_folder
+    dataset_path = data_dir / config.ratings_file
 
-    # 이미 데이터셋 폴더가 있으면 다운로드하지 않고 바로 반환합니다.
     if dataset_path.exists():
-        print(f"[데이터 확인] 기존 IMDB 데이터셋 사용: {dataset_path}")
+        print(f"[데이터 확인] 기존 ratings.txt 사용: {dataset_path}")
         return dataset_path
 
-    # 다운로드할 압축 파일 경로를 만듭니다.
     archive_path = data_dir / config.archive_name
 
-
-    # zip 압축 파일을 해제합니다.
-    import zipfile
-
-    # zip 압축 파일을 해제합니다.
-    print("[압축 해제] IMDB 데이터셋 압축을 해제합니다.")
+    print("[압축 해제] 네이버 데이터셋 압축을 해제합니다.")
     with zipfile.ZipFile(archive_path, 'r') as zip_ref:
         zip_ref.extractall(path=data_dir)
 
-    # 압축 해제 후 데이터셋 폴더 경로를 반환합니다.
     print(f"[압축 해제 완료] {dataset_path}")
     return dataset_path
 
 
-def read_imdb_split(dataset_path: Path, split: str) -> List[Tuple[str, int]]:
-    """IMDB train 또는 test 폴더에서 리뷰 텍스트와 라벨을 읽어옵니다."""
-    
-    # 결과를 저장할 리스트입니다.
+def read_ratings_txt(file_path: Path) -> List[Tuple[str, int]]:
+    """ratings.txt 파일에서 리뷰 텍스트와 라벨을 읽고 섞어서 반환합니다."""
+
     samples: List[Tuple[str, int]] = []
 
-    # neg는 부정 리뷰이므로 0, pos는 긍정 리뷰이므로 1로 지정합니다.
-    label_map = {"neg": 0, "pos": 1}
-
-    # neg 폴더와 pos 폴더를 차례대로 읽습니다.
-    for label_name, label_id in label_map.items():
-
-        # 예: data/aclImdb/train/neg 또는 data/aclImdb/train/pos
-        review_dir = dataset_path / split / label_name
-
-        # 폴더가 없으면 사용자에게 명확한 오류 메시지를 보여 줍니다.
-        if not review_dir.exists():
-            raise FileNotFoundError(f"리뷰 폴더를 찾을 수 없습니다: {review_dir}")
-
-        # 해당 폴더 안의 모든 txt 파일을 정렬된 순서로 읽습니다.
-        for file_path in sorted(review_dir.glob("*.txt")):
-
-            # IMDB 리뷰 파일은 일반적으로 UTF-8로 읽을 수 있습니다.
-            text = file_path.read_text(encoding="utf-8", errors="ignore")
-
-            # 텍스트와 라벨을 하나의 샘플로 저장합니다.
-            samples.append((text, label_id))
+    with file_path.open(encoding="utf-8", errors="ignore") as f:
+        next(f)  # 헤더 행(id\tdocument\tlabel) 건너뜁니다.
+        for line in f:
+            parts = line.strip().split("\t")
+            if len(parts) != 3:
+                continue
+            _, document, label = parts
+            samples.append((document, int(label)))
 
     # 라벨 순서가 한쪽으로 몰리지 않도록 샘플 순서를 섞습니다.
     random.shuffle(samples)
 
-    # 전체 샘플 리스트를 반환합니다.
     return samples
 
 
@@ -273,15 +253,22 @@ def make_toy_samples() -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
 
 
 def load_data(config: Config) -> Tuple[List[Tuple[str, int]], List[Tuple[str, int]]]:
-    """IMDB 데이터를 로드하고, 실패하면 선택적으로 예제 데이터를 반환합니다."""
+    """네이버 리뷰 데이터를 로드하고, 실패하면 선택적으로 예제 데이터를 반환합니다."""
 
     try:
-        # IMDB 데이터셋을 다운로드하고 압축을 해제합니다.
-        dataset_path = download_and_extract_imdb(config)
+        # ratings.zip 압축을 해제합니다.
+        extract_ratings(config)
 
-        # 훈련 데이터와 테스트 데이터를 각각 읽습니다.
-        train_samples = read_imdb_split(dataset_path, "train")
-        test_samples = read_imdb_split(dataset_path, "test")
+        # ratings.txt 파일 경로를 만듭니다.
+        ratings_file = Path(config.data_dir) / config.ratings_file
+
+        # ratings.txt에서 전체 샘플을 읽고 섞습니다.
+        samples = read_ratings_txt(ratings_file)
+
+        # 앞쪽 80%를 훈련용, 뒤쪽 20%를 테스트용으로 분할합니다.
+        split_idx = int(len(samples) * 0.8)
+        train_samples = samples[:split_idx]
+        test_samples = samples[split_idx:]
 
         # 데이터 개수를 출력하여 정상 로드 여부를 확인합니다.
         print(f"[데이터 로드 완료] train={len(train_samples)}, test={len(test_samples)}")
@@ -291,7 +278,7 @@ def load_data(config: Config) -> Tuple[List[Tuple[str, int]], List[Tuple[str, in
 
     except Exception as error:
         # 다운로드 실패, 압축 해제 실패, 파일 경로 오류 등을 여기서 처리합니다.
-        print(f"[경고] IMDB 원본 데이터 로드 실패: {error}")
+        print(f"[경고] 네이버 리뷰 원본 데이터 로드 실패: {error}")
 
         # 옵션이 꺼져 있으면 오류를 다시 발생시켜 실행을 중단합니다.
         if not config.use_toy_data_if_download_fails:
@@ -367,8 +354,8 @@ def encode_text(text: str, word_to_index: Dict[str, int], max_len: int) -> torch
 # 7. Dataset 클래스 정의
 # ---------------------------------------------------------------------
 
-class IMDBDataset(Dataset):
-    """IMDB 리뷰 텍스트와 라벨을 PyTorch Dataset 형태로 제공하는 클래스입니다."""
+class RatingsDataset(Dataset):
+    """네이버 리뷰 텍스트와 라벨을 PyTorch Dataset 형태로 제공하는 클래스입니다."""
 
     def __init__(self, samples: List[Tuple[str, int]], word_to_index: Dict[str, int], max_len: int):
         # 원본 텍스트와 라벨 샘플을 저장합니다.
@@ -403,7 +390,7 @@ class IMDBDataset(Dataset):
 # 8. LightningDataModule 정의
 # ---------------------------------------------------------------------
 
-class IMDBDataModule(pl.LightningDataModule):
+class RatingsDataModule(pl.LightningDataModule):
     """데이터 준비와 DataLoader 생성을 담당하는 Lightning DataModule입니다."""
 
     def __init__(self, config: Config):
@@ -434,10 +421,10 @@ class IMDBDataModule(pl.LightningDataModule):
         self.word_to_index = build_vocab(train_samples, self.config)
 
         # 훈련 데이터를 Dataset 객체로 변환합니다.
-        full_train_dataset = IMDBDataset(train_samples, self.word_to_index, self.config.max_len)
+        full_train_dataset = RatingsDataset(train_samples, self.word_to_index, self.config.max_len)
 
         # 테스트 데이터를 Dataset 객체로 변환합니다.
-        self.test_dataset = IMDBDataset(test_samples, self.word_to_index, self.config.max_len)
+        self.test_dataset = RatingsDataset(test_samples, self.word_to_index, self.config.max_len)
 
         # 훈련 데이터 중 일부를 검증 데이터로 분리합니다.
         val_size = int(len(full_train_dataset) * self.config.val_ratio)
@@ -491,7 +478,7 @@ class IMDBDataModule(pl.LightningDataModule):
 # ---------------------------------------------------------------------
 
 class LSTMClassifier(pl.LightningModule):
-    """IMDB 리뷰 감성 분석을 위한 LSTM 분류 모델입니다."""
+    """네이버 리뷰 감성 분석을 위한 LSTM 분류 모델입니다."""
 
     def __init__(
         self,
@@ -564,9 +551,12 @@ class LSTMClassifier(pl.LightningModule):
         # hidden은 마지막 시점의 은닉 상태입니다.
         output, (hidden, cell) = self.lstm(embedded)
 
-        # num_layers가 1이고 단방향 LSTM이면 hidden[-1]이 마지막 계층의 마지막 은닉 상태입니다.
-        # sentence_vector 형태: (배치크기, hidden_dim)
-        sentence_vector = hidden[-1]
+        # hidden[-1]은 패딩 토큰(zero-embedding)을 다 처리한 뒤의 상태라
+        # 패딩이 길수록 실제 내용 신호가 희석됩니다.
+        # 대신 각 샘플의 마지막 실제 토큰 위치의 output을 사용합니다.
+        lengths = (input_ids != 0).sum(dim=1).clamp(min=1)  # (배치크기,)
+        batch_size = output.size(0)
+        sentence_vector = output[torch.arange(batch_size, device=output.device), lengths - 1]
 
         # Dropout을 적용합니다.
         sentence_vector = self.dropout(sentence_vector)
@@ -683,7 +673,7 @@ def main() -> None:
     pl.seed_everything(config.seed, workers=True)
 
     # DataModule을 생성합니다.
-    data_module = IMDBDataModule(config)
+    data_module = RatingsDataModule(config)
 
     # DataModule의 setup을 먼저 실행하여 vocabulary 크기를 알 수 있게 합니다.
     data_module.setup(stage="fit")
@@ -722,8 +712,10 @@ def main() -> None:
 
     # 예측 예시 문장입니다.
     examples = [
-        "This movie was fantastic and the acting was excellent.",
-        "The film was boring and the story was terrible.",
+        "코미디는 사라졌지만 이 영화 괜찮은 영화다 성룡의진중한 연기를 맛 볼수 있다는 점에서도 점수를 높게준다",
+        "중후반으로 갈수록 내용 전개 개연성이 너무 떨어진다. 특히 진반장이 범인들 정체 다 알고난 이후부터 너무 아쉬움..후반 개연성만 어느정도 됬으면 최고 였을듯ㅋ",
+        "성룡 영화중에서 이렇게 개연성 없이 억지스럽고 답답한 스토리와 황당하고 이해 안가는 캐릭터 설정들이 있는 영화가 있다는거에 진심 깜놀.",
+        "성룡 영화의 끝판 왕. 더 이상 말이 필요없다. 이 형님은 나이를 거꾸로 먹나?",
     ]
 
     # 예시 문장별 예측 결과를 출력합니다.

@@ -26,6 +26,7 @@ dist/
 
 # Logs
 *.log
+lightning_logs/
 
 # Dataset files downloaded during execution
 spam.csv
